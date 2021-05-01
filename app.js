@@ -3,6 +3,9 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 
+const cors = require("cors");
+app.use(cors());
+
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
 
@@ -60,10 +63,13 @@ app.post("/api/users",function(req,res){
 });
 
 app.post("/api/users/:_id/exercises",function(req,res){
-  const _id = req.body._id;
+  const _id = req.params._id;
   const description=req.body.description;
-	const duration=req.body.duration;
-	const date=req.body.date;
+	const duration=Number(req.body.duration);
+  let date=new Date().toDateString();
+  if(req.body.date)
+	date=new Date(req.body.date).toDateString();
+
   User.findById(_id,function(err,user){
     if(err) console.log(err);
     if(user){
@@ -73,13 +79,12 @@ app.post("/api/users/:_id/exercises",function(req,res){
         date: (new Date(date)).toDateString()
       };
       user.exercises.push(newExercise);
-      user.save();
-      res.json({
-        _id: user._id,
-        username: user.username,
-        date: newExercise.date,
-        duration: newExercise.duration,
-        description: newExercise.description
+      user.save(function(err,user){
+        res.json({
+          _id,
+          username: user.username,
+          ...newExercise
+        });
       });
     }
     else{
@@ -89,11 +94,12 @@ app.post("/api/users/:_id/exercises",function(req,res){
 });
 
 app.get("/api/users/:_id/logs",function(req,res){
+  console.log(req.query);
   const _id = req.params._id;
   let from = new Date("1000-01-01");
   if(req.query.from)
   from = new Date(req.query.from);
-  let to = new Date("9999-12-30");
+  let to = new Date("9999-12-31");
   if(req.query.to)
   to = new Date(req.query.to);
   let limit;
@@ -106,11 +112,19 @@ app.get("/api/users/:_id/logs",function(req,res){
         new Date(exercise.date) >= from && new Date(exercise.date) <= to
       ));
       myExercises = myExercises.slice(0,limit);
+      let resEx = [];
+      myExercises.forEach(function(ex){
+        resEx.push({
+          description: ex.description,
+          duration: Number(ex.duration),
+          date: ex.date
+        });
+      });
       res.json({
         _id: user._id,
         username: user.username,
         count: myExercises.length,
-        log: myExercises
+        log: resEx
       });
     }
     else{
@@ -122,6 +136,12 @@ app.get("/api/users/:_id/logs",function(req,res){
 app.get("/api/users",function(req,res){
   User.find({},"_id username",function(er,users){
     res.send(users);
+  });
+});
+
+app.get("/del",function(req,res){
+  User.deleteMany({},function(err,users){
+    res.redirect("/");
   });
 });
 
