@@ -94,7 +94,6 @@ app.post("/api/users/:_id/exercises",function(req,res){
 });
 
 app.get("/api/users/:_id/logs",function(req,res){
-  console.log(req.query);
   const _id = req.params._id;
   let from = new Date("1000-01-01");
   if(req.query.from)
